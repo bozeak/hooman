@@ -1,0 +1,80 @@
+diff --git a/customerror.module b/customerror.module
+index e515a0a..70e47f5 100644
+--- a/customerror.module
++++ b/customerror.module
+@@ -88,6 +88,10 @@ function customerror_admin_settings($form, &$form_state) {
+     );
+     // Make room for some additional 403 codes.
+     $weight += 8;
++
++    // Fetch error code array.
++    $err_response = variable_get('customerror_' . $code, array());
++
+     $form[$group]['customerror_' . $code . '_title'] = array(
+       '#type' => 'textfield',
+       '#title' => t('Title for @code', array('@code' => $code)),
+@@ -97,9 +101,10 @@ function customerror_admin_settings($form, &$form_state) {
+       '#description' => t('Title of @code error page', array('@code' => $code)),
+     );
+     $form[$group]['customerror_' . $code] = array(
+-      '#type' => 'textarea',
++      '#type' => 'text_format',
+       '#title' => t('Description for @code', array('@code' => $code)),
+-      '#default_value' => variable_get('customerror_' . $code, $desc[1]),
++      '#default_value' => $err_response['value'],
++      '#format' => $err_response['format'],
+       '#rows' => 10,
+       '#description' => t('This text will be displayed if a @code (@desc) error occurs.', array('@code' => $code, '@desc' => $desc[1])),
+     );
+@@ -229,12 +234,21 @@ function customerror_page($code) {
+         $code = customerroralt_code($code);
+       }
+ 
+-      $desc = _customerror_fetch_error($code);
++//      $desc = _customerror_fetch_error($code);
+       //drupal_set_title(variable_get('customerror_' . $code . '_title', $desc[0]));
++
++      $err_resp = variable_get('customerror_' . $code, array());
++      switch ($err_resp['format']) {
++        case 'plain_text':
++          $err_resp['value'] = check_markup($err_resp['value'], 'plain_text');
++          break;
++      }
++
+       $output = theme('customerror', array(
+         'code' => $code,
+-        'content' => variable_get('customerror_' . $code, $desc[1]),
++        'content' => $err_resp,
+       ));
++
+       if (module_exists('php')) {
+         $output = php_eval($output);
+       }
+diff --git a/customerroralt/customerroralt.module b/customerroralt/customerroralt.module
+index 2ae8e30..5fee576 100644
+--- a/customerroralt/customerroralt.module
++++ b/customerroralt/customerroralt.module
+@@ -42,6 +42,10 @@ function customerroralt_form_customerror_admin_settings_alter(&$form, &$form_sta
+       '#collapsible' => TRUE,
+       '#weight' => -14,
+     );
++
++    // Fetch error code array.
++    $err_response = variable_get('customerror_403_' . $role, array());
++
+     $form[$group]['customerror_403_' . $role . '_title'] = array(
+       '#type' => 'textfield',
+       '#title' => t('Title for 403 for @role', array('@role' => $role)),
+@@ -51,9 +55,10 @@ function customerroralt_form_customerror_admin_settings_alter(&$form, &$form_sta
+       '#description' => t('Title of 403 for @role error page', array('@role' => $role)),
+     );
+     $form[$group]['customerror_403_' . $role] = array(
+-      '#type' => 'textarea',
++      '#type' => 'text_format',
+       '#title' => t('Description for 403 for @role', array('@role' => $role)),
+-      '#default_value' => variable_get('customerror_403_' . $role, $desc),
++      '#default_value' => $err_response['value'],
++      '#format' => $err_response['format'],
+       '#rows' => 10,
+       '#description' => t('This text will be displayed if a 403 error occurs for a @role (@desc).', array('@role' => $role, '@desc' => $desc)),
+     );
